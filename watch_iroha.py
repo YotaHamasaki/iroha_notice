@@ -60,22 +60,37 @@ def line_broadcast(text: str):
         print("LINE send error:", resp.status_code, resp.text)
         raise
 
-def main_loop():
+def check_once():
     if not TOKEN:
         raise SystemExit("ERROR: LINE_CHANNEL_ACCESS_TOKEN is not set.")
     state = load_state()
     last = state.get("sold_out")
 
+    html = fetch_html()
+    now_soldout = is_sold_out(html)
+
+    if last is True and now_soldout is False:
+        msg = f"在庫復活！\n{URL}"
+        line_broadcast(msg)
+        print("Notified:", msg)
+
+    state["sold_out"] = now_soldout
+    save_state(state)
+    print("checked. sold_out=", now_soldout)
+
+def main_loop():
+    if not TOKEN:
+        raise SystemExit("ERROR: LINE_CHANNEL_ACCESS_TOKEN is not set.")
+    state = load_state()
+    last = state.get("sold_out")
     while True:
         try:
             html = fetch_html()
             now_soldout = is_sold_out(html)
-            # 遷移検知：SOLD OUT → 解除（在庫復活）
             if last is True and now_soldout is False:
-                msg = f"在庫復活！はよ買い！\n{URL}"
+                msg = f"在庫復活！\n{URL}"
                 line_broadcast(msg)
                 print("Notified:", msg)
-            # 初回は状態だけ確定
             last = now_soldout
             state["sold_out"] = now_soldout
             save_state(state)
@@ -85,4 +100,8 @@ def main_loop():
         time.sleep(INTERVAL)
 
 if __name__ == "__main__":
-    main_loop()
+    run_once = os.getenv("RUN_ONCE", "").lower() in ("1", "true", "yes")
+    if run_once:
+        check_once()
+    else:
+        main_loop()
