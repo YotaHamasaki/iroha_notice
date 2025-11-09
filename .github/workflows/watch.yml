@@ -1,11 +1,18 @@
-name: Sumika Goods Watcher (Test Run)
+name: Sumika Goods Watcher
 
 on:
+  schedule:
+    - cron: "*/5 * * * *"   # 5分おき（UTC）
   workflow_dispatch:
 
+concurrency:
+  group: sumika-watcher
+  cancel-in-progress: true
+
 jobs:
-  watch-test:
+  watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
@@ -19,13 +26,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # ★ 前回状態を「売り切れだった(true)」としてセット
-      - name: Prime state as sold out
-      　run: echo '{"sold_out": true}' > .sumika_state.json
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: .sumika_state.json
+          key: sumika-state
 
-      - name: Run watcher once (simulate availability)
-        env:
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-          TARGET_URL: https://example.com/
-          RUN_ONCE: "1"
-        run: python -u watch_iroha.py
+      - name: Run watcher once
