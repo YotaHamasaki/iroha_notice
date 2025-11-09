@@ -24,4 +24,4 @@ jobs:
     - name: Run watcher
       env:
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-      run: python watch_sumika.py
+      run: python watch_iroha.py
